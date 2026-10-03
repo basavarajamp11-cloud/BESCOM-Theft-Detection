@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BESCOM | Zone 1 Power Theft Detection & SCADA Telemetry</title>
+  
+  <!-- Pure Vanilla CSS - Zero external CDNs -->
+  <link rel="stylesheet" href="styles.css">
+  
+  <!-- Clean SVG Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+</head>
+<body>
+
+  <!-- Top SCADA Operations Header -->
+  <header class="scada-header">
+    <div class="brand-wrapper">
+      <div class="brand-badge">⚡</div>
+      <div class="header-title-box">
+        <h1><span class="org-title">BESCOM</span> SCADA MONITORING</h1>
+        <p>Bangalore Electricity Supply Company Limited • Smart Grid Telemetry Division</p>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <!-- Operational Connection Indicator -->
+      <div class="connection-badge">
+        <span class="status-dot active-sse" id="statusDot"></span>
+        <span id="statusText">Connecting SSE...</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Dedicated Prominent Sub-Heading Banner -->
+  <section class="zone-banner">
+    <div class="zone-banner-title">
+      <span class="zone-tag">PRIMARY FEEDER 11kV</span>
+      <h2>Zone 1 Current Utilized</h2>
+    </div>
+    <div class="system-clock" id="systemClock">00:00:00 IST</div>
+  </section>
+
+  <!-- Main Dashboard Container -->
+  <main class="dashboard-container">
+
+    <!-- 4 Distinct Live Metric Instrumentation Cards -->
+    <section class="metrics-grid">
+      
+      <!-- Card A: Current Entering Zone 1 (I_In) -->
+      <div class="metric-card card-in">
+        <div class="metric-header">
+          <span class="metric-label">Current Entering Zone 1</span>
+          <span class="metric-symbol">I_In</span>
+        </div>
+        <div class="metric-value-box">
+          <span class="metric-number" id="valIn">0.000</span>
+          <span class="metric-unit">A</span>
+        </div>
+        <div class="metric-footer">
+          <span>Inflow from Primary Feeder</span>
+          <span>11 kV Master CT</span>
+        </div>
+      </div>
+
+      <!-- Card B: Current Exiting Zone 1 (I_Out) -->
+      <div class="metric-card card-out">
+        <div class="metric-header">
+          <span class="metric-label">Current Exiting Zone 1</span>
+          <span class="metric-symbol">I_Out</span>
+        </div>
+        <div class="metric-value-box">
+          <span class="metric-number" id="valOut">0.000</span>
+          <span class="metric-unit">A</span>
+        </div>
+        <div class="metric-footer">
+          <span>Outflow to Downstream Zone 2</span>
+          <span>Inter-Zone Bus Meter</span>
+        </div>
+      </div>
+
+      <!-- Card C: Authorized Current Utilized (I_Auth) -->
+      <div class="metric-card card-auth">
+        <div class="metric-header">
+          <span class="metric-label">Authorized Current Utilized</span>
+          <span class="metric-symbol">I_Auth</span>
+        </div>
+        <div class="metric-value-box">
+          <span class="metric-number" id="valAuth">0.000</span>
+          <span class="metric-unit">A</span>
+        </div>
+        <div class="metric-footer">
+          <span>Combined: House 1 (<span id="valHouse1">0.000 A</span>) + House 2 (<span id="valHouse2">0.000 A</span>)</span>
+          <span>Smart Meters</span>
+        </div>
+      </div>
+
+      <!-- Card D: Unauthorized Current Utilized (I_Theft) -->
+      <div class="metric-card card-theft">
+        <div class="metric-header">
+          <span class="metric-label">Unauthorized Current Utilized</span>
+          <span class="metric-symbol">I_Theft</span>
+        </div>
+        <div class="metric-value-box">
+          <span class="metric-number" id="valTheft">0.000</span>
+          <span class="metric-unit">A</span>
+        </div>
+        <div class="metric-footer">
+          <span>Illicit Parasitic Feeder Bypass</span>
+          <span style="color:#ff1744;font-weight:700;">Threshold: &gt; 0.25A</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Interactive KCL Balance Bar -->
+    <section class="kcl-section">
+      <div class="kcl-header">
+        <h3>⚡ Kirchhoff's Current Law (KCL) Real-Time Energy Balance</h3>
+        <div class="kcl-formula-badge" id="kclFormulaDisplay">
+          I_In - I_Out - I_Auth = I_Theft
+        </div>
+      </div>
+
+      <div class="kcl-visual-bar-wrapper">
+        <div class="kcl-bar-track">
+          <div class="kcl-bar-segment seg-out" id="segOut" style="width: 40%;" title="Exiting Zone 1 (I_Out)"></div>
+          <div class="kcl-bar-segment seg-auth" id="segAuth" style="width: 60%;" title="Authorized Consumption (I_Auth)"></div>
+          <div class="kcl-bar-segment seg-theft" id="segTheft" style="width: 0%;" title="Unauthorized Theft Bypass (I_Theft)"></div>
+        </div>
+
+        <div class="kcl-legend">
+          <div class="legend-item">
+            <span class="legend-color" style="background:#3b82f6;"></span>
+            <span>Current Exiting Zone 1 (I_Out)</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-color" style="background:var(--color-emerald);"></span>
+            <span>Authorized Domestic Draw (I_Auth = House 1 + House 2)</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-color" style="background:var(--color-crimson);"></span>
+            <span>Unauthorized Stolen Draw (I_Theft)</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Test Injection Controls -->
+    <section class="simulator-strip">
+      <div class="sim-info">
+        <span style="font-size:24px;">🧪</span>
+        <div>
+          <h4>Interactive SCADA Ingestion & Simulation Controls</h4>
+          <p>Inject simulated illegal tap loads to test instantaneous KCL fault triggering and alert modal responsiveness.</p>
+        </div>
+      </div>
+      <div class="sim-buttons">
+        <button class="btn btn-crimson" onclick="window.triggerTheftTest(true, 3.450)">
+          🚨 Trigger Illegal Tap (+3.450 A Theft)
+        </button>
+        <button class="btn btn-crimson" onclick="window.triggerTheftTest(true, 1.820)">
+          ⚠️ Trigger Heavy Tap (+1.820 A Theft)
+        </button>
+        <button class="btn btn-emerald" onclick="window.triggerTheftTest(false)">
+          ✓ Clear Fault / Restore Balanced Grid
+        </button>
+      </div>
+    </section>
+
+    <!-- Live Telemetry Diagnostics Table -->
+    <section class="diagnostics-card">
+      <div class="diagnostics-header">
+        <h3>Zone 1 Edge Telemetry Packet Stream Diagnostics</h3>
+        <span style="font-size:12px;color:var(--text-secondary);">Direct ESP32 Node Ingestion via <code>/api/telemetry</code></span>
+      </div>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Feeder Segment</th>
+              <th>Packet Source</th>
+              <th>Last Update</th>
+              <th>KCL Evaluation Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Zone 1 Primary Feeder Sub-Span #104</td>
+              <td id="diagSource">ESP32_EDGE_NODE</td>
+              <td id="diagTimestamp">--:--:--</td>
+              <td id="diagStatus"><span style="color:#00e676;font-weight:700;">✓ BALANCED / NORMAL</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Pop-Up Power Theft Alert Modal -->
+  <div class="modal-backdrop" id="alertModal">
+    <div class="alert-modal-card">
+      <div class="modal-banner">
+        <span class="modal-icon">🚨</span>
+        <div>
+          <h3>POWER THEFT ALERT DETECTED</h3>
+          <p style="font-size:12px;opacity:0.9;">BESCOM SCADA Vigilance Automated Tripping Threshold Exceeded</p>
+        </div>
+      </div>
+      
+      <div class="modal-content">
+        <div class="alert-row">
+          <span class="alert-row-label">Detection Location</span>
+          <span class="alert-row-val" id="alertLocation">Monitored Zone 1 Feeder Tap</span>
+        </div>
+
+        <div class="alert-row stolen-mag-row">
+          <span class="alert-row-label">Exact Stolen Magnitude</span>
+          <span class="alert-row-val" id="alertMagnitude">Theft Current: 3.450 A</span>
+        </div>
+
+        <div class="alert-row">
+          <span class="alert-row-label">Detection Timestamp</span>
+          <span class="alert-row-val" id="alertTimestamp">--</span>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn-ack" id="btnAckAlert">
+            Acknowledge & Dismiss Alert
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="scada-footer">
+    <div>
+      <strong>BESCOM</strong> • Bangalore Electricity Supply Company Limited | Smart Grid Operations
+    </div>
+    <div>
+      KCL Real-Time Telemetry Stream • Zero External Dependencies
+    </div>
+  </footer>
+
+  <!-- Pure Vanilla JavaScript -->
+  <script src="app.js"></script>
+
+</body>
+</html>
