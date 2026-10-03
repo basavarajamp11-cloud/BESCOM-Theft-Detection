@@ -1,0 +1,29 @@
+{
+  "name": "bescom-theft-detection",
+  "version": "1.0.0",
+  "description": "BESCOM Smart Grid Monitoring & Real-Time Power Theft Detection SCADA Platform",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "seed": "node database/seed.js"
+  },
+  "keywords": [
+    "bescom",
+    "smart-grid",
+    "power-theft-detection",
+    "scada",
+    "iot",
+    "kcl",
+    "energy-audit",
+    "bengaluru"
+  ],
+  "author": "BESCOM Smart Grid Operations & Vigilance Division",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "ws": "^8.18.0"
+  }
+}

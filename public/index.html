@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BESCOM | Smart Grid SCADA Monitoring & Power Theft Detection</title>
+  
+  <!-- Leaflet CSS for Bengaluru GIS Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <!-- Dashboard SCADA Styles -->
+  <link rel="stylesheet" href="/css/styles.css">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+</head>
+<body>
+
+  <!-- Top SCADA Operations Header -->
+  <header class="header">
+    <div class="brand">
+      <div class="brand-logo">⚡</div>
+      <div class="brand-text">
+        <h1>BESCOM SCADA OPERATIONS <span class="badge-tag">BMAZ / BRAZ</span></h1>
+        <p>Bangalore Electricity Supply Company Limited | Smart Grid Division</p>
+      </div>
+    </div>
+
+    <div class="header-controls">
+      <div class="stream-status">
+        <span class="status-dot" id="wsStatusDot"></span>
+        <span id="wsStatusText">Connecting Telemetry...</span>
+      </div>
+      <button class="audio-btn" id="audioBtn" onclick="window.app.toggleAudio()">
+        🔔 Audio: ON
+      </button>
+    </div>
+  </header>
+
+  <!-- Navigation Bar -->
+  <nav class="nav-tabs">
+    <button class="nav-tab active" data-tab="tab-gis">
+      🗺️ GIS Grid Map & SCADA
+    </button>
+    <button class="nav-tab" data-tab="tab-kcl">
+      ⚡ DTC Energy Audit (KCL)
+    </button>
+    <button class="nav-tab" data-tab="tab-incidents">
+      🚨 Vigilance Incidents & Dispatch
+      <span class="tab-badge" id="incidentsBadge">0</span>
+    </button>
+    <button class="nav-tab" data-tab="tab-kerc">
+      📊 KERC AT&C Loss Compliance
+    </button>
+  </nav>
+
+  <!-- Main Content Container -->
+  <main class="main-content">
+
+    <!-- Top KPI Cards -->
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">
+          <span>Total DTC Supply Demand</span>
+          <span>⚡</span>
+        </div>
+        <div class="kpi-value">
+          <span id="kpiTotalDemand">0</span>
+          <span class="kpi-unit">kW</span>
+        </div>
+        <div class="kpi-subtitle">Master substation & DTC telemetry</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">
+          <span>Metered Consumer Load</span>
+          <span>🏠</span>
+        </div>
+        <div class="kpi-value">
+          <span id="kpiMeteredDemand">0</span>
+          <span class="kpi-unit">kW</span>
+        </div>
+        <div class="kpi-subtitle">Aggregated smart meter consumption</div>
+      </div>
+
+      <div class="kpi-card theft-card">
+        <div class="kpi-label">
+          <span>Unaccounted Commercial Theft</span>
+          <span>⚠️</span>
+        </div>
+        <div class="kpi-value" style="color:#ef4444;">
+          <span id="kpiTheftKw">0.0</span>
+          <span class="kpi-unit">kW</span>
+        </div>
+        <div class="kpi-subtitle">Direct line hooking & bypassed draw</div>
+      </div>
+
+      <div class="kpi-card loss-card">
+        <div class="kpi-label">
+          <span>Average Grid Loss Rate</span>
+          <span>📉</span>
+        </div>
+        <div class="kpi-value">
+          <span id="kpiLossPct">0.0%</span>
+        </div>
+        <div class="kpi-subtitle">KERC Urban Threshold: &le; 11.5%</div>
+      </div>
+
+      <div class="kpi-card theft-card">
+        <div class="kpi-label">
+          <span>Active Theft Incidents</span>
+          <span>🚨</span>
+        </div>
+        <div class="kpi-value" style="color:#f87171;">
+          <span id="kpiActiveIncidents">0</span>
+          <span class="kpi-unit">Cases</span>
+        </div>
+        <div class="kpi-subtitle">Vigilance squad dispatch queue</div>
+      </div>
+
+      <div class="kpi-card revenue-card">
+        <div class="kpi-label">
+          <span>Revenue Leakage Rate</span>
+          <span>💰</span>
+        </div>
+        <div class="kpi-value" style="color:#34d399;">
+          <span id="kpiHourlyLoss">₹0</span>
+          <span class="kpi-unit">/hr</span>
+        </div>
+        <div class="kpi-subtitle">Based on ₹8.50/kWh KERC commercial tariff</div>
+      </div>
+    </section>
+
+    <!-- Interactive Grid Scenario Simulator Bar -->
+    <section class="simulator-panel">
+      <div class="simulator-info">
+        <div class="sim-icon">🧪</div>
+        <div class="sim-text">
+          <h4>Live Grid Injection & Scenario Simulator</h4>
+          <p>Simulate real-world theft vectors on Bengaluru feeders to test real-time KCL detection and automated enforcement.</p>
+        </div>
+      </div>
+      <div class="simulator-actions">
+        <button class="btn btn-danger" onclick="window.app.triggerScenario('HOOKING', 'DTC', 1, 8.5)">
+          ⚡ Overhead Tap (+8.5 kW Hooking)
+        </button>
+        <button class="btn btn-danger" onclick="window.app.triggerScenario('METER_BYPASS', 'CONSUMER', 4)">
+          🔌 Bypass Consumer Meter
+        </button>
+        <button class="btn btn-warning" onclick="window.app.triggerScenario('NEUTRAL_TAMPER', 'CONSUMER', 11)">
+          ⚠️ Neutral Wire Cut / Earth Leak
+        </button>
+        <button class="btn btn-warning" onclick="window.app.triggerScenario('MAGNET', 'CONSUMER', 18)">
+          🧲 Neodymium Magnetic Tamper
+        </button>
+        <button class="btn btn-success" onclick="window.app.triggerScenario('RESET_ALL')">
+          ✓ Reset All to Normal
+        </button>
+      </div>
+    </section>
+
+    <!-- TAB 1: GIS Map & SCADA Overview -->
+    <div id="tab-gis" class="tab-content active">
+      <div class="gis-layout">
+        <!-- Interactive Map Container -->
+        <div class="map-container-card">
+          <div class="map-header">
+            <div class="map-title">
+              <span>Bengaluru Metropolitan Distribution GIS (Indiranagar • Koramangala • Whitefield • Peenya)</span>
+            </div>
+            <div style="font-size:11px;color:#9ca3af;">
+              <span>● Green: Balanced</span> | 
+              <span style="color:#f59e0b;">● Amber: Loss</span> | 
+              <span style="color:#ef4444;">● Red: Active Theft</span>
+            </div>
+          </div>
+          <div id="leafletMap"></div>
+        </div>
+
+        <!-- Transformer Inspector Sidebar -->
+        <div class="gis-sidebar" id="transformerInspector">
+          <div class="sidebar-title">
+            <span>DTC Telemetry Inspector</span>
+            <span style="font-size:11px;color:#9ca3af;">Click any marker on map</span>
+          </div>
+          <div style="color:#6b7280;text-align:center;padding:30px;">
+            Loading transformer telemetry...
+          </div>
+        </div>
+      </div>
+
+      <!-- Real-Time Charts Grid -->
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">Real-Time Power Balance & KCL Theft Dynamics (Last 20 Cycles)</div>
+            <span style="font-size:11px;color:#9ca3af;">Stream Rate: 3s</span>
+          </div>
+          <div style="flex:1;min-height:240px;position:relative;">
+            <canvas id="realtimePowerChart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">Feeder AT&C Loss Benchmark vs KERC Target (11.5%)</div>
+            <a href="/api/reports/audit.csv" class="btn" style="padding:3px 8px;font-size:11px;">📥 Export CSV</a>
+          </div>
+          <div style="flex:1;min-height:240px;position:relative;">
+            <canvas id="feederLossChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: DTC Energy Audit & KCL Matrix -->
+    <div id="tab-kcl" class="tab-content">
+      <div class="table-card">
+        <div class="table-header">
+          <h3>⚡ Real-Time Distribution Transformer Center (DTC) Energy Audit</h3>
+          <span style="font-size:12px;color:#9ca3af;">Mathematical KCL: ΔP = P(DTC) - Σ P(Meters)</span>
+        </div>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>DTC Code</th>
+                <th>Transformer Name</th>
+                <th>Supply (P_dtc)</th>
+                <th>Metered (Σ P_cons)</th>
+                <th>Loss (ΔP)</th>
+                <th>Tech Loss (I²R)</th>
+                <th>Theft Loss</th>
+                <th>Status</th>
+                <th>Confidence</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="kclAuditTableBody">
+              <tr>
+                <td colspan="10" style="text-align:center;color:#6b7280;padding:24px;">Loading DTC energy audit data...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: Vigilance Incidents & Squad Dispatch -->
+    <div id="tab-incidents" class="tab-content">
+      <div class="table-card">
+        <div class="table-header">
+          <h3>🚨 Active Vigilance Tickets & Automated Enforcement Queue</h3>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-primary" onclick="window.app.fetchIncidents()">🔄 Refresh Cases</button>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Ticket No</th>
+                <th>Transformer Center</th>
+                <th>Consumer / RR No</th>
+                <th>Theft Vector</th>
+                <th>Unmetered Draw</th>
+                <th>Status</th>
+                <th>Time Logged</th>
+                <th>Vigilance Actions</th>
+              </tr>
+            </thead>
+            <tbody id="incidentsTableBody">
+              <tr>
+                <td colspan="8" style="text-align:center;color:#6b7280;padding:24px;">No active incidents.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: KERC Regulatory AT&C Loss Compliance -->
+    <div id="tab-kerc" class="tab-content">
+      <div class="table-card">
+        <div class="table-header">
+          <h3>📊 Karnataka Electricity Regulatory Commission (KERC) Feeder Audit</h3>
+          <a href="/api/reports/audit.csv" class="btn btn-primary" download>📥 Download Regulatory Audit CSV</a>
+        </div>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Feeder Code</th>
+                <th>Feeder Name</th>
+                <th>Substation & Division</th>
+                <th>Total DTCs</th>
+                <th>Supply kW</th>
+                <th>Metered kW</th>
+                <th>AT&C Loss %</th>
+                <th>KERC Limit</th>
+                <th>Compliance</th>
+                <th>Hourly Revenue Loss</th>
+              </tr>
+            </thead>
+            <tbody id="atcReportTableBody">
+              <tr>
+                <td colspan="10" style="text-align:center;color:#6b7280;padding:24px;">Loading KERC compliance records...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Legal FIR Dossier Modal -->
+  <div class="modal-overlay" id="firModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>⚖️ BESCOM Vigilance Police Wing - Legal FIR Dossier</h3>
+        <button class="modal-close" onclick="window.app.closeFirModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:#9ca3af;font-size:12px;">
+          Generated under Section 135 & 138 of the Electricity Act 2003 for submission to the Special Court / jurisdictional Police Station.
+        </p>
+        <pre class="dossier-box" id="firDossierContent">Loading legal dossier...</pre>
+        <div style="display:flex;justify-content:flex-end;gap:10px;">
+          <button class="btn" onclick="window.print()">🖨️ Print Dossier</button>
+          <button class="btn btn-primary" onclick="window.app.closeFirModal()">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div>
+      © 2026 Bangalore Electricity Supply Company Limited (BESCOM) | Smart Grid Monitoring & Telemetry Infrastructure
+    </div>
+    <div class="footer-links">
+      <span>Karnataka Power Transmission Corporation Limited (KPTCL)</span> •
+      <span>KERC Approved SCADA Standards</span>
+    </div>
+  </footer>
+
+  <!-- External Libraries -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Application Logic -->
+  <script src="/js/ws.js"></script>
+  <script src="/js/map.js"></script>
+  <script src="/js/charts.js"></script>
+  <script src="/js/app.js"></script>
+
+</body>
+</html>
